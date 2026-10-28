@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C 시험 대비 — 주관식 문제풀이</title>
+<style>
+:root{--bg:#f5f7fb;--panel:#fff;--ink:#172033;--muted:#667085;--line:#dce2ec;--blue:#2457d6;--blue2:#eaf0ff;--red:#b42318;--redbg:#fff0ef;--green:#067647;--greenbg:#ecfdf3;--gold:#8a5b00}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+header{background:#111b32;color:#fff;padding:24px max(18px,calc((100% - 1000px)/2))}header h1{font-size:clamp(22px,4vw,32px);margin:0 0 6px}header p{margin:0;color:#cbd5e1}
+main{max-width:1000px;margin:20px auto;padding:0 16px 50px}.toolbar,.stats,.question,.notice{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.toolbar{padding:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.toolbar label{font-size:14px;color:var(--muted)}
+select,button{font:inherit;border-radius:9px;border:1px solid var(--line);padding:9px 12px;background:#fff;color:var(--ink)}button{cursor:pointer;font-weight:650}button.primary{background:var(--blue);color:white;border-color:var(--blue)}button:disabled{opacity:.45;cursor:not-allowed}
+.stats{padding:13px 16px;margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:14px}.stats strong{color:var(--ink)}
+.notice{padding:12px 15px;margin-bottom:14px;color:var(--muted);font-size:14px}
+.question{padding:20px;margin-bottom:14px}.qtop{display:flex;justify-content:space-between;gap:12px;align-items:center;color:var(--muted);font-size:13px}.tag{display:inline-block;background:var(--blue2);color:#2448a5;padding:3px 9px;border-radius:20px;font-weight:700}.question h2{font-size:18px;margin:12px 0}.prompt{white-space:pre-wrap}.code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;background:#f0f3f8;padding:2px 5px;border-radius:5px}
+textarea{display:block;width:100%;min-height:82px;resize:vertical;margin-top:14px;padding:12px;border:1px solid #c9d2e2;border-radius:10px;font:15px/1.55 inherit;background:#fff;color:var(--ink)}textarea:focus{outline:2px solid #a9bcff;border-color:var(--blue)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.feedback{margin-top:14px;padding:13px;border-radius:10px;background:#f7f8fa;border:1px solid var(--line)}.feedback.correct{background:var(--greenbg);border-color:#a6f4c5}.feedback.wrong{background:var(--redbg);border-color:#fecdca}.feedback h3{font-size:15px;margin:0 0 5px}.feedback p{margin:5px 0}.answer{white-space:pre-wrap}.hidden{display:none!important}.bottom{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.small{font-size:13px;color:var(--muted)}footer{color:var(--muted);font-size:13px;text-align:center;padding:15px}
+@media(min-width:700px){.question{padding:24px}.question h2{font-size:19px}}
+</style>
+</head>
+<body>
+<header><h1>C 시험 대비 주관식 문제풀이</h1><p>개념 설명 · 한 줄 코드 작성 · 메모리/포인터 · extern/volatile · 구조체 · 자료구조</p></header>
+<main>
+<div class="toolbar">
+<label for="topic">범위</label><select id="topic"><option value="all">전체 범위</option></select>
+<label for="mode">풀이 모드</label><select id="mode"><option value="all">전체 문제</option><option value="wrong">틀린 문제 다시 풀기</option><option value="unanswered">미응답 문제</option></select>
+<button class="primary" id="start">문제 불러오기</button><button id="gradeAll">전체 채점</button><button id="reset">진행 초기화</button>
+</div>
+<div class="stats"><span>현재 범위 <strong id="count">0문제</strong></span><span>채점 완료 <strong id="graded">0</strong></span><span>정답 <strong id="correct">0</strong></span><span>틀린 문제 누적 <strong id="wrongCount">0</strong></span></div>
+<div class="notice">채점은 주관식 답안의 핵심 키워드를 기준으로 한 자동 채점입니다. 표현이 달라도 핵심 개념이 맞으면 정답 처리될 수 있고, 반대로 정답이어도 키워드가 빠지면 오답 처리될 수 있습니다. 해설과 모범 답안을 확인하고 직접 판단해 주세요. 작성한 답과 오답 목록은 이 브라우저의 localStorage에 저장됩니다.</div>
+<div id="list"></div>
+<div class="bottom"><button class="primary" id="gradeAllBottom">전체 채점</button><button id="wrongOnly">틀린 문제만 다시 풀기</button><button id="export">오답 목록 내보내기</button></div>
+<footer>오프라인 단일 HTML · 답안 저장은 현재 브라우저에만 유지됩니다.</footer>
+</main>
+<script>
+const questions = [
+{ id:1, topic:"컴파일·기초", type:"개념", q:"C 프로그램이 소스 코드에서 실행 파일이 되기까지의 대표적인 단계를 순서대로 쓰세요.", keys:["전처리","컴파일","어셈블","링크"], answer:"전처리 → 컴파일(어셈블리 생성) → 어셈블(오브젝트 파일 생성) → 링크(실행 파일 생성). 도구 체인에 따라 단계가 통합될 수 있습니다.", explain:"전처리는 헤더 포함·매크로 처리, 컴파일은 C를 어셈블리 등으로 변환, 어셈블은 오브젝트 파일 생성, 링크는 오브젝트와 라이브러리를 결합합니다."},
+{ id:2, topic:"컴파일·기초", type:"개념", q:"CPU는 무엇의 약자이며, 핵심 역할은 무엇인가요?", keys:["central processing unit","중앙 처리 장치","명령","실행"], answer:"CPU는 Central Processing Unit(중앙 처리 장치)의 약자이며, 명령어를 해석·실행하고 연산과 제어를 수행합니다.", explain:"단순히 계산만 하는 장치가 아니라 명령 실행과 시스템 동작 제어를 담당합니다."},
+{ id:3, topic:"컴파일·기초", type:"개념", q:"선언(declaration)과 정의(definition)의 차이를 설명하세요.", keys:["선언","이름","타입","정의","저장 공간","구현"], answer:"선언은 이름과 타입 등 정보를 알립니다. 정의는 객체의 저장 공간을 제공하거나 함수의 구현을 제공합니다.", explain:"함수 원형은 선언이고 함수 본문이 있는 정의는 구현을 제공합니다. extern 변수 선언은 일반적으로 저장 공간을 새로 정의하지 않습니다."},
+{ id:4, topic:"컴파일·기초", type:"개념", q:"컴파일에 성공한 C 코드가 반드시 올바르게 동작한다고 할 수 없는 이유를 설명하세요.", keys:["정의되지 않은 동작","undefined behavior","실행","보장"], answer:"컴파일러가 문법적으로 처리할 수 있어도 실행 시 정의되지 않은 동작(UB), 논리 오류, 메모리 오류가 있을 수 있어 결과가 보장되지 않습니다.", explain:"컴파일 성공은 문법·번역 단계의 성공이지, 런타임 안전성과 논리적 정확성의 증명이 아닙니다."},
+{ id:5, topic:"포인터 심화", type:"개념", q:"배열 arr와 포인터 p가 서로 다른 개념인 이유를 설명하고, sizeof에서의 차이를 쓰세요.", keys:["배열","저장 공간","포인터","주소","sizeof","크기"], answer:"배열은 원소들이 연속된 저장 공간이고 포인터는 주소 값을 저장하는 객체입니다. 배열 자체에 sizeof를 적용하면 배열 전체 크기, 포인터 변수에 적용하면 포인터 변수의 크기를 구합니다.", explain:"배열 이름은 대부분의 식에서 첫 원소 포인터로 변환되지만 sizeof(arr)와 &arr 등은 예외입니다."},
+{ id:6, topic:"포인터 심화", type:"개념", q:"arr[i]와 동등한 포인터 표현을 한 줄로 작성하세요.", keys:["*(arr+i)"], answer:"*(arr + i)", explain:"배열 첨자 연산은 포인터 덧셈과 역참조로 정의할 수 있습니다."},
+{ id:7, topic:"포인터 심화", type:"개념", q:"int 포인터 p에 p + 1을 수행하면 주소가 몇 바이트 이동하는지 어떻게 결정되나요?", keys:["sizeof(int)","가리키는 타입","타입의 크기"], answer:"가리키는 타입의 크기만큼 이동합니다. int 포인터라면 sizeof(int)바이트만큼 이동합니다.", explain:"정확한 바이트 수는 구현의 int 크기에 따라 달라질 수 있으므로 무조건 4바이트라고 단정하지 않습니다."},
+{ id:8, topic:"포인터 심화", type:"개념", q:"배열의 마지막 원소 바로 다음(one-past-the-end) 주소를 만들 수 있나요? 그 주소를 역참조할 수 있나요?", keys:["만들","허용","역참조할 수 없","역참조 불가"], answer:"같은 배열의 마지막 원소 바로 다음 위치를 가리키는 포인터는 만들 수 있지만, 그 포인터를 역참조하면 안 됩니다.", explain:"그 포인터는 반복문의 종료 조건 등에 사용할 수 있지만 실제 원소를 가리키지는 않습니다."},
+{ id:9, topic:"포인터 심화", type:"코드 한 줄", q:"const int *p 형태에서 포인터 p를 통해 가리키는 값을 수정할 수 없도록 선언하는 한 줄 코드를 작성하세요.", keys:["const int *p"], answer:"const int *p;", explain:"포인터 자체는 다른 주소를 가리키도록 바꿀 수 있지만, p를 통한 값 수정은 허용되지 않습니다."},
+{ id:10, topic:"포인터 심화", type:"코드 한 줄", q:"포인터 p 자체가 다른 주소를 가리키도록 변경할 수 없게 선언하는 한 줄 코드를 작성하세요. (p는 int를 가리킴)", keys:["int *const p"], answer:"int *const p = &value;", explain:"int *const p는 상수 포인터입니다. 초기화가 필요하므로 예시에서는 int value;가 이미 선언되어 있다고 가정합니다."},
+{ id:11, topic:"포인터 심화", type:"개념", q:"const int *p와 int *const p의 차이를 각각 설명하세요.", keys:["값","수정","주소","포인터"], answer:"const int *p는 p를 통해 가리키는 값을 수정할 수 없고, int *const p는 p가 다른 주소를 가리키도록 바꿀 수 없습니다.", explain:"첫 번째는 가리키는 대상에 대한 수정 제한, 두 번째는 포인터 변수 자체의 재대입 제한입니다."},
+{ id:12, topic:"포인터 심화", type:"개념", q:"C 함수에 포인터를 인자로 전달했을 때 함수가 호출자의 원본 값을 변경할 수 있는 이유와, 호출자의 포인터 자체를 바꾸려면 필요한 것을 설명하세요.", keys:["값으로 전달","주소","원본","포인터의 포인터","이중 포인터"], answer:"C는 인자를 값으로 전달합니다. 포인터 인자는 주소 값의 복사본이므로 그 주소를 통해 원본 객체를 바꿀 수 있습니다. 호출자의 포인터 변수 자체를 바꾸려면 보통 포인터의 포인터를 전달합니다.", explain:"C에는 참조에 의한 전달이 없으며 포인터도 값으로 복사됩니다."},
+{ id:13, topic:"포인터 심화", type:"개념", q:"함수에서 지역 자동 변수의 주소를 반환하면 안 되는 이유를 설명하세요.", keys:["수명","함수 종료","유효하지 않","댕글링","dangling"], answer:"함수가 종료되면 지역 자동 변수의 수명이 끝나므로 반환된 포인터는 유효하지 않은 객체를 가리키게 됩니다.", explain:"호출 후 해당 포인터를 역참조하는 것은 정의되지 않은 동작입니다."},
+{ id:14, topic:"포인터 심화", type:"개념", q:"표준 C에서 void * 포인터에 대해 직접 할 수 없는 두 연산을 쓰세요.", keys:["역참조","산술","포인터 연산"], answer:"표준 C에서는 void *를 직접 역참조하거나 포인터 산술을 수행할 수 없습니다.", explain:"void에는 크기가 정의되어 있지 않아 이동 단위를 계산할 수 없습니다. GNU 확장 등은 표준 C와 구분해야 합니다."},
+{ id:15, topic:"포인터 심화", type:"개념", q:"포인터 p가 가리키는 동적 메모리를 free(p)한 뒤 다시 역참조하면 어떤 문제가 발생하나요?", keys:["use-after-free","정의되지 않은 동작","해제","수명"], answer:"해제된 메모리를 사용하는 use-after-free이며 정의되지 않은 동작입니다.", explain:"free 이후 p에 남은 주소를 역참조하지 않아야 합니다. p = NULL은 해당 포인터를 통한 실수를 줄이는 데 도움은 되지만 다른 별칭까지 무효화하지는 않습니다."},
+{ id:16, topic:"extern·저장 기간", type:"개념", q:"extern의 일반적인 역할과, 여러 소스 파일에서 전역 변수를 공유할 때 헤더와 한 개의 .c 파일에 각각 무엇을 작성하는지 설명하세요.", keys:["extern","선언","정의","헤더","한 개","소스 파일"], answer:"extern은 다른 곳에 정의된 외부 연결 객체 등을 선언할 때 사용합니다. 헤더에는 보통 extern int count; 같은 선언을 두고, 한 개의 .c 파일에 int count = 0;처럼 정의를 둡니다.", explain:"헤더에 초기값을 가진 전역 변수 정의를 넣으면 여러 번 포함·링크될 때 중복 정의 문제가 생길 수 있습니다."},
+{ id:17, topic:"extern·저장 기간", type:"코드 한 줄", q:"다른 소스 파일에 정의된 int형 전역 변수 count를 참조하도록 선언하는 한 줄 코드를 작성하세요.", keys:["extern int count"], answer:"extern int count;", explain:"이 문장은 보통 선언이며, 변수의 실제 정의는 다른 소스 파일에 있어야 합니다."},
+{ id:18, topic:"extern·저장 기간", type:"개념", q:"static 지역 변수의 이름 범위와 저장 기간을 각각 설명하세요.", keys:["블록","범위","정적 저장 기간","호출 사이","유지"], answer:"이름의 범위는 선언된 블록 안이지만 정적 저장 기간을 가지므로 값이 함수 호출 사이에도 유지됩니다.", explain:"범위(scope)와 수명(lifetime)은 서로 다른 개념입니다."},
+{ id:19, topic:"extern·저장 기간", type:"개념", q:"범위(scope)와 수명(lifetime)의 차이를 설명하세요.", keys:["이름","사용할 수 있는 영역","존재","기간"], answer:"범위는 이름을 사용할 수 있는 영역이고, 수명은 객체가 존재하는 기간입니다.", explain:"static 지역 변수는 블록 범위지만 프로그램 실행 기간 동안 존재합니다."},
+{ id:20, topic:"volatile", type:"개념", q:"volatile의 목적을 설명하고, volatile이 보장하지 않는 중요한 특성 두 가지 이상을 쓰세요.", keys:["컴파일러","접근","제거","원자성","동기화","메모리 장벽"], answer:"volatile은 해당 객체에 대한 접근이 관찰 가능하므로 컴파일러가 접근을 임의로 제거하거나 합치지 않도록 표현할 때 사용합니다. 원자성, 스레드 동기화, 메모리 장벽은 보장하지 않습니다.", explain:"메모리 매핑 레지스터나 비동기적으로 바뀌는 일부 객체에 유용하지만, 멀티스레드 동기화 수단으로 단독 사용하면 안 됩니다."},
+{ id:21, topic:"volatile", type:"코드 한 줄", q:"주소 0x40000000에 있는 메모리 매핑 레지스터를 volatile unsigned int 포인터로 다루기 위한 한 줄 선언을 작성하세요. (uintptr_t 사용 가능)", keys:["volatile","unsigned int","*","0x40000000"], answer:"volatile unsigned int *reg = (volatile unsigned int *)0x40000000u;", explain:"실제 MCU에서는 제조사 헤더의 레지스터 정의를 우선 사용해야 합니다. 정수 주소를 포인터로 바꾸는 방식은 대상 MCU/컴파일러 환경에 의존할 수 있습니다."},
+{ id:22, topic:"volatile", type:"개념", q:"volatile 변수의 값을 while문에서 기다리는 것만으로 스레드 간 안전한 동기화가 보장되지 않는 이유를 설명하세요.", keys:["원자성","동기화","데이터 레이스","메모리 순서","보장하지"], answer:"volatile은 원자적 접근이나 스레드 간 happens-before 관계, 메모리 순서를 보장하지 않으므로 스레드 동기화 수단이 아닙니다.", explain:"C11 스레드 환경에서는 atomic 타입과 동기화 수단을 검토해야 합니다. 임베디드 ISR과 공유하는 변수도 플랫폼별 규칙을 확인해야 합니다."},
+{ id:23, topic:"구조체", type:"개념", q:"구조체의 sizeof가 멤버 크기의 단순 합과 달라질 수 있는 이유를 설명하세요.", keys:["패딩","정렬","alignment","멤버 사이","끝"], answer:"컴파일러가 멤버 정렬을 위해 멤버 사이 또는 구조체 끝에 패딩 바이트를 넣을 수 있기 때문입니다.", explain:"정확한 크기는 멤버 타입, ABI, 컴파일러와 대상 플랫폼에 따라 달라질 수 있습니다."},
+{ id:24, topic:"구조체", type:"개념", q:"struct와 union의 메모리 사용 방식 차이를 설명하세요.", keys:["struct","각 멤버","별도","union","공유","같은 메모리"], answer:"struct는 각 멤버가 각각의 저장 공간을 가지며 패딩이 들어갈 수 있습니다. union은 모든 멤버가 같은 메모리 공간을 공유합니다.", explain:"union의 크기는 모든 멤버를 저장할 수 있을 만큼 크며 정렬 요구사항도 고려됩니다."},
+{ id:25, topic:"구조체", type:"코드 한 줄", q:"이름이 Node인 구조체 타입을 typedef로 Node라는 별칭까지 만들고, int data와 다음 노드를 가리키는 포인터 next를 멤버로 선언하는 한 줄 코드를 작성하세요.", keys:["typedef struct node","int data","struct node *next","Node"], answer:"typedef struct node { int data; struct node *next; } Node;", explain:"자기 자신을 가리키는 멤버는 typedef 이름 Node가 완성되기 전이므로 struct node *next 형태를 사용합니다."},
+{ id:26, topic:"구조체", type:"개념", q:"구조체 변수를 다른 구조체 변수에 대입하면 어떤 일이 일어나며, 포인터 멤버가 있을 때 주의할 점은 무엇인가요?", keys:["멤버 값","복사","포인터 값","얕은 복사","가리키는 메모리"], answer:"같은 구조체 타입의 대입은 멤버 값을 복사합니다. 포인터 멤버는 주소 값만 복사하므로 두 구조체가 같은 동적 메모리를 가리킬 수 있습니다.", explain:"이 경우 한쪽에서 메모리를 해제하면 다른 쪽 포인터가 댕글링 포인터가 될 수 있습니다. 필요하면 깊은 복사를 직접 구현합니다."},
+{ id:27, topic:"구조체", type:"개념", q:"구조체를 메모리 바이트 그대로 파일이나 네트워크에 저장하는 방식이 이식성이 낮은 이유를 두 가지 이상 쓰세요.", keys:["패딩","정렬","엔디안","ABI","구현"], answer:"패딩 바이트, 멤버 정렬, 엔디안, ABI 및 타입 크기 차이 때문에 다른 플랫폼에서 같은 레이아웃이라고 보장할 수 없습니다.", explain:"이식성 있는 직렬화는 필드별로 명시적인 형식과 바이트 순서를 정의하는 방식이 안전합니다."},
+{ id:28, topic:"동적 메모리", type:"개념", q:"malloc과 calloc의 차이를 설명하세요.", keys:["초기화","초기화되지 않은","0","할당"], answer:"malloc은 요청한 크기의 메모리를 할당하지만 내용을 초기화하지 않습니다. calloc은 원소 개수와 크기를 받아 할당하고 모든 바이트를 0으로 초기화합니다.", explain:"calloc의 바이트 0 초기화가 모든 타입의 의미상 0 표현과 항상 동일하다고 일반화하지 말고, C 표준의 객체 표현 규칙을 구분합니다."},
+{ id:29, topic:"동적 메모리", type:"개념", q:"realloc의 결과를 원래 포인터에 바로 대입할 때 생길 수 있는 문제와 안전한 처리 방법을 설명하세요.", keys:["실패","NULL","원래 포인터","임시 포인터","메모리 누수"], answer:"실패하면 realloc은 NULL을 반환하고 기존 할당은 유지됩니다. 결과를 원래 포인터에 바로 대입하면 기존 주소를 잃을 수 있으므로 임시 포인터에 받은 뒤 성공 여부를 확인하고 대입합니다.", explain:"realloc(p, 0)의 세부 동작은 C 표준 버전에 따라 주의가 필요하므로 일반적인 크기 변경과 구분합니다."},
+{ id:30, topic:"동적 메모리", type:"코드 한 줄", q:"int형 원소 n개를 저장할 동적 메모리를 sizeof *p 방식으로 할당하는 한 줄 코드를 작성하세요. (p는 int *)", keys:["malloc","n * sizeof *p"], answer:"p = malloc(n * sizeof *p);", explain:"실제 코드에서는 stdlib.h를 포함하고 할당 실패 여부를 검사해야 합니다."},
+{ id:31, topic:"동적 메모리", type:"개념", q:"같은 동적 메모리를 두 번 free하면 어떤 문제가 발생하나요?", keys:["정의되지 않은 동작","double free","두 번"], answer:"같은 할당을 두 번 해제하는 double free이며 정의되지 않은 동작입니다.", explain:"해제 후 포인터를 NULL로 설정하면 동일 포인터를 통한 중복 해제 실수를 줄일 수 있지만 별칭 포인터는 여전히 위험합니다."},
+{ id:32, topic:"정수·UB", type:"개념", q:"정의되지 않은 동작(UB)이란 무엇이며, 결과를 특정 값으로 단정하면 안 되는 이유는 무엇인가요?", keys:["정의되지 않은 동작","보장","컴파일러","결과"], answer:"C 표준이 해당 동작에 요구사항을 부과하지 않는 경우입니다. 컴파일러나 실행 환경이 특정 결과를 보장하지 않으므로 결과를 단정할 수 없습니다.", explain:"UB는 단순히 실행 때마다 랜덤 값이 나온다는 뜻이 아니라, 표준 차원의 보장이 없다는 뜻입니다."},
+{ id:33, topic:"정수·UB", type:"개념", q:"C에서 -7 / 3의 결과를 쓰고, 소수 부분이 어떻게 처리되는지 설명하세요.", keys:["-2","0 방향","절삭","버려"], answer:"-7 / 3의 결과는 -2이며 소수 부분은 0 방향으로 절삭됩니다.", explain:"C99 이후 정수 나눗셈은 0 방향 절삭입니다."},
+{ id:34, topic:"정수·UB", type:"개념", q:"부호 있는 정수 오버플로와 부호 없는 정수 오버플로의 차이를 설명하세요.", keys:["정의되지 않은 동작","모듈러","순환","unsigned","부호 없는"], answer:"부호 있는 정수 오버플로는 정의되지 않은 동작입니다. 부호 없는 정수 연산은 해당 타입의 범위를 법(modulo)으로 순환합니다.", explain:"부호 없는 정수는 2의 거듭제곱을 법으로 하는 산술로 동작합니다."},
+{ id:35, topic:"정수·UB", type:"개념", q:"&&와 ||의 단락 평가(short-circuit evaluation)를 설명하세요.", keys:["왼쪽","결과","오른쪽","평가하지","평가하지 않"], answer:"&&는 왼쪽이 거짓이면 오른쪽을 평가하지 않고, ||는 왼쪽이 참이면 오른쪽을 평가하지 않습니다.", explain:"오른쪽에 부작용이나 역참조가 있다면 단락 평가 여부가 중요합니다."},
+{ id:36, topic:"배열·문자열", type:"개념", q:"char s[] = \"abc\";에서 배열 원소 수와 문자열 길이를 각각 쓰고 차이를 설명하세요.", keys:["4","3","널 문자","\\0"], answer:"배열 원소 수는 4개, 문자열 길이는 3입니다. 마지막 원소는 문자열 종료를 나타내는 널 문자 '\\0'입니다.", explain:"sizeof(s)는 배열 전체 크기(문자 단위가 1바이트인 char 배열에서는 4바이트)를 반환합니다."},
+{ id:37, topic:"배열·문자열", type:"개념", q:"strlen(s)와 sizeof(s)의 차이를 설명하세요. s가 char 배열일 때와 char 포인터일 때를 구분하세요.", keys:["strlen","널 문자 제외","sizeof","배열 전체","포인터 크기"], answer:"strlen은 널 문자 전까지의 문자열 길이를 구합니다. sizeof는 배열에 직접 적용하면 배열 전체 크기지만, 포인터 변수에 적용하면 포인터 변수의 크기입니다.", explain:"함수 매개변수로 전달된 배열은 포인터로 조정되므로 함수 안에서 sizeof로 원래 배열 크기를 알아낼 수 없습니다."},
+{ id:38, topic:"배열·문자열", type:"개념", q:"char *s = \"abc\";에서 s[0] = 'A';를 실행하면 왜 문제가 되나요?", keys:["문자열 리터럴","수정","정의되지 않은 동작"], answer:"s가 가리키는 문자열 리터럴을 수정하려 하므로 정의되지 않은 동작입니다.", explain:"수정 가능한 배열이 필요하면 char s[] = \"abc\";처럼 배열을 선언합니다."},
+{ id:39, topic:"함수·전처리기", type:"개념", q:"함수 포인터란 무엇이며, 임베디드에서 활용되는 사례를 하나 쓰세요.", keys:["함수 주소","간접 호출","콜백","인터럽트","드라이버"], answer:"함수 포인터는 함수의 주소를 저장하고 간접 호출하는 데 사용합니다. 콜백, 드라이버 API, 인터럽트 벡터 또는 상태 전이 처리 등에 활용됩니다.", explain:"호출하려는 함수의 반환 타입과 매개변수 타입이 함수 포인터 타입과 호환되어야 합니다."},
+{ id:40, topic:"함수·전처리기", type:"코드 한 줄", q:"두 int 인자를 받아 int를 반환하는 함수 포인터 변수 op를 선언하는 한 줄 코드를 작성하세요.", keys:["int (*op)(int, int)"], answer:"int (*op)(int, int);", explain:"괄호가 중요합니다. int *op(int, int)는 함수 포인터가 아니라 int 포인터를 반환하는 함수 선언입니다."},
+{ id:41, topic:"비트 연산", type:"코드 한 줄", q:"unsigned 정수 reg에서 bit 위치의 비트를 1로 설정하는 한 줄 코드를 작성하세요.", keys:["reg |= (1u << bit)"], answer:"reg |= (1u << bit);", explain:"비트 마스크를 OR 연산하면 지정한 비트만 1로 설정하고 다른 비트는 유지합니다."},
+{ id:42, topic:"비트 연산", type:"코드 한 줄", q:"unsigned 정수 reg에서 bit 위치의 비트를 0으로 지우는 한 줄 코드를 작성하세요.", keys:["reg &= ~(1u << bit)"], answer:"reg &= ~(1u << bit);", explain:"마스크를 반전한 뒤 AND 연산하여 지정한 비트만 0으로 만듭니다."},
+{ id:43, topic:"비트 연산", type:"코드 한 줄", q:"reg의 bit 위치 비트가 켜져 있는지 검사하는 조건식을 한 줄로 작성하세요.", keys:["(reg & (1u << bit)) != 0u"], answer:"(reg & (1u << bit)) != 0u", explain:"AND 결과가 0이 아니면 해당 비트가 켜져 있습니다."},
+{ id:44, topic:"자료구조", type:"개념", q:"스택과 큐의 처리 순서 원칙을 각각 설명하세요.", keys:["LIFO","후입선출","FIFO","선입선출"], answer:"스택은 LIFO(후입선출), 큐는 FIFO(선입선출)입니다.", explain:"스택은 마지막에 들어온 원소를 먼저 꺼내고, 큐는 먼저 들어온 원소를 먼저 꺼냅니다."},
+{ id:45, topic:"자료구조", type:"개념", q:"배열 크기가 MAX이고 한 칸을 비워 가득 참을 구분하는 원형 큐의 full 조건식을 작성하세요.", keys:["(rear + 1) % MAX == front","(rear+1)%MAX==front"], answer:"(rear + 1) % MAX == front", explain:"한 칸을 비우는 방식에서는 실제 사용 가능 용량이 MAX - 1입니다."},
+{ id:46, topic:"자료구조", type:"개념", q:"인접 리스트로 표현한 그래프에서 BFS와 DFS의 대표 자료구조를 각각 쓰세요.", keys:["BFS","큐","DFS","스택","재귀"], answer:"BFS는 큐를 사용하고, DFS는 재귀 호출 또는 명시적 스택을 사용합니다.", explain:"인접 리스트 기준 두 탐색의 시간 복잡도는 일반적으로 O(V + E)입니다."},
+{ id:47, topic:"자료구조", type:"개념", q:"BFS에서 정점을 큐에 넣을 때 방문 표시를 하는 이유를 설명하세요.", keys:["중복","큐","여러 번","방문","방지"], answer:"큐에 넣을 때 방문 표시하면 같은 정점이 여러 경로에서 발견되어 큐에 중복 삽입되는 일을 방지할 수 있습니다.", explain:"정점을 꺼낼 때만 방문 표시하면 같은 정점이 여러 번 큐에 들어갈 수 있습니다."},
+{ id:48, topic:"자료구조", type:"개념", q:"연결 리스트 노드를 삭제할 때, 삭제 대상 노드의 다음 주소를 먼저 저장하는 이유를 설명하세요.", keys:["next","주소","잃","링크","해제"], answer:"삭제 대상 노드를 해제하거나 링크를 변경하기 전에 다음 노드의 주소를 저장해야 나머지 리스트로 연결을 유지할 수 있습니다.", explain:"먼저 연결 정보를 보존한 뒤 이전 노드의 링크를 갱신하고 대상 노드를 해제하는 순서를 점검합니다."},
+{ id:49, topic:"자료구조", type:"개념", q:"그래프가 비연결 그래프일 때 한 정점에서 시작한 BFS/DFS가 모든 정점을 방문한다고 할 수 없는 이유를 설명하세요.", keys:["비연결","경로","도달","연결 요소"], answer:"시작 정점에서 경로로 도달할 수 없는 다른 연결 요소의 정점은 해당 탐색에서 방문되지 않기 때문입니다.", explain:"모든 정점을 방문하려면 방문되지 않은 정점을 찾아 새로운 탐색을 시작해야 합니다."},
+{ id:50, topic:"컴파일·기초", type:"개념", q:"매크로 #define SQUARE(x) ((x) * (x))에 SQUARE(i++)처럼 부작용이 있는 인자를 전달할 때 위험한 이유를 설명하세요.", keys:["두 번","여러 번","부작용","증가","평가"], answer:"매크로는 텍스트 치환이므로 인자 i++가 두 번 치환되어 여러 번 평가될 수 있어 예상치 못한 동작이나 정의되지 않은 동작이 발생할 수 있습니다.", explain:"매크로 인자를 여러 번 평가하지 않도록 설계하거나 적절한 함수로 대체하는 편이 안전합니다."}
+];
+const $=id=>document.getElementById(id);
+const norm=s=>String(s||"").toLowerCase().replace(/\s+/g,"").replace(/[()[\]{};,.]/g,"").replace(/['"`]/g,"");
+const state={answers:{},graded:{},wrong:new Set(JSON.parse(localStorage.getItem("cquiz_wrong")||"[]")),view:[]};
+function save(){localStorage.setItem("cquiz_answers",JSON.stringify(state.answers));localStorage.setItem("cquiz_graded",JSON.stringify(state.graded));localStorage.setItem("cquiz_wrong",JSON.stringify([...state.wrong]));}
+function loadSaved(){try{state.answers=JSON.parse(localStorage.getItem("cquiz_answers")||"{}");state.graded=JSON.parse(localStorage.getItem("cquiz_graded")||"{}");state.wrong=new Set(JSON.parse(localStorage.getItem("cquiz_wrong")||"[]"));}catch(e){}}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function grade(q,answer){
+ const a=norm(answer); if(!a)return {ok:false,empty:true,matched:[]};
+ let keys=q.keys.map(norm),matched=keys.filter(k=>k&&a.includes(k));
+ let required=Math.min(keys.length, keys.length<=2?keys.length:Math.max(2,Math.ceil(keys.length*.55)));
+ // Code-answer questions are strict after whitespace/punctuation normalization, with selected equivalent forms.
+ if(q.type==="코드 한 줄"){
+   const equivalents={
+    6:["*(arr+i)"],9:["constint*p"],10:["int*constp=&value","int*constp=&value;"],17:["externintcount"],21:["volatileunsignedint*reg=(volatileunsignedint*)0x40000000u"],25:["typedefstructnode{intdata;structnode*next;}node"],30:["p=malloc(n*sizeof*p)","p=malloc(n*sizeof*p);"],40:["int(*op)(int,int)"],41:["reg|=(1u<<bit)"],42:["reg&=~(1u<<bit)"],43:["(reg&(1u<<bit))!=0u"]
+   };
+   const allowed=equivalents[q.id]||[norm(q.answer)];
+   return {ok:allowed.includes(a)||allowed.some(x=>a===x),empty:false,matched};
+ }
+ return {ok:matched.length>=required,empty:false,matched};
+}
+function updateStats(){
+ $("count").textContent=state.view.length+"문제";
+ const ids=state.view.map(q=>String(q.id));
+ $("graded").textContent=ids.filter(id=>state.graded[id]).length;
+ $("correct").textContent=ids.filter(id=>state.graded[id]?.ok).length;
+ $("wrongCount").textContent=state.wrong.size;
+}
+function populateTopics(){[...new Set(questions.map(q=>q.topic))].forEach(t=>{let o=document.createElement("option");o.value=t;o.textContent=t;$("topic").append(o);});}
+function render(){
+ const topic=$("topic").value,mode=$("mode").value;
+ state.view=questions.filter(q=>(topic==="all"||q.topic===topic)&&(mode==="all"||(mode==="wrong"&&state.wrong.has(q.id))||(mode==="unanswered"&&!state.graded[q.id])));
+ $("list").innerHTML="";
+ if(!state.view.length){$("list").innerHTML='<div class="question"><h2>표시할 문제가 없습니다.</h2><p>범위 또는 풀이 모드를 바꾸어 주세요.</p></div>';updateStats();return;}
+ state.view.forEach((q,i)=>{
+  const result=state.graded[q.id];
+  const el=document.createElement("section");el.className="question";el.id="q"+q.id;
+  el.innerHTML=`<div class="qtop"><span>${i+1} / ${state.view.length}번 · ${q.type}</span><span class="tag">${esc(q.topic)}</span></div>
+  <h2>${esc(q.q)}</h2>
+  <textarea aria-label="답안 ${q.id}번" data-answer="${q.id}" placeholder="${q.type==="코드 한 줄"?"코드 한 줄만 작성하세요.":"핵심 개념을 자신의 말로 작성하세요."}">${esc(state.answers[q.id]||"")}</textarea>
+  <div class="actions"><button class="primary" data-grade="${q.id}">이 문제 채점</button><button data-reveal="${q.id}">모범 답안 보기</button><button data-wrong="${q.id}">${state.wrong.has(q.id)?"오답 목록에서 제거":"오답으로 표시"}</button></div>
+  <div class="feedback ${result?(result.ok?"correct":"wrong"):"hidden"}" id="feedback${q.id}">${result?feedbackHTML(q,result):""}</div>`;
+  $("list").appendChild(el);
+ });
+ updateStats();
+}
+function feedbackHTML(q,r){return `<h3>${r.ok?"정답으로 판정했습니다.":"오답 또는 핵심 키워드 부족입니다."}</h3><p><strong>모범 답안:</strong> <span class="answer">${esc(q.answer)}</span></p><p><strong>해설:</strong> ${esc(q.explain)}</p>${r.matched?.length?`<p class="small">인식된 핵심 키워드: ${esc(r.matched.join(", "))}</p>`:""}`;}
+function gradeOne(id){
+ const q=questions.find(x=>x.id===Number(id)),answer=state.answers[id]||"",r=grade(q,answer);
+ state.graded[id]=r;if(r.ok)state.wrong.delete(q.id);else state.wrong.add(q.id);
+ save();const f=$("feedback"+id);if(f){f.className="feedback "+(r.ok?"correct":"wrong");f.innerHTML=feedbackHTML(q,r);}const b=document.querySelector(`[data-wrong="${id}"]`);if(b)b.textContent=state.wrong.has(q.id)?"오답 목록에서 제거":"오답으로 표시";updateStats();
+}
+function reveal(id){const q=questions.find(x=>x.id===Number(id)),f=$("feedback"+id);f.className="feedback";f.innerHTML=`<h3>모범 답안 및 해설</h3><p><strong>모범 답안:</strong> <span class="answer">${esc(q.answer)}</span></p><p><strong>해설:</strong> ${esc(q.explain)}</p>`;}
+$("list").addEventListener("input",e=>{if(e.target.matches("textarea[data-answer]")){state.answers[e.target.dataset.answer]=e.target.value;save();}});
+$("list").addEventListener("click",e=>{
+ const g=e.target.closest("[data-grade]"),r=e.target.closest("[data-reveal]"),w=e.target.closest("[data-wrong]");
+ if(g)gradeOne(g.dataset.grade);
+ if(r)reveal(r.dataset.reveal);
+ if(w){const id=Number(w.dataset.wrong);if(state.wrong.has(id))state.wrong.delete(id);else state.wrong.add(id);save();w.textContent=state.wrong.has(id)?"오답 목록에서 제거":"오답으로 표시";updateStats();}
+});
+function gradeAll(){state.view.forEach(q=>gradeOne(q.id));}
+$("start").onclick=render;$("gradeAll").onclick=gradeAll;$("gradeAllBottom").onclick=gradeAll;
+$("topic").onchange=render;$("mode").onchange=render;
+$("reset").onclick=()=>{if(!confirm("답안, 채점 결과, 오답 목록을 모두 초기화할까요?"))return;state.answers={};state.graded={};state.wrong.clear();save();render();};
+$("wrongOnly").onclick=()=>{$("mode").value="wrong";render();window.scrollTo({top:0,behavior:"smooth"});};
+$("export").onclick=()=>{const rows=questions.filter(q=>state.wrong.has(q.id)).map(q=>({번호:q.id,범위:q.topic,문제:q.q,내답:state.answers[q.id]||"",모범답안:q.answer,해설:q.explain}));const blob=new Blob(["\ufeff"+JSON.stringify(rows,null,2)],{type:"application/json;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="C시험대비_오답.json";a.click();URL.revokeObjectURL(a.href);};
+loadSaved();populateTopics();render();
+</script>
+</body>
+</html>
